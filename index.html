@@ -6,39 +6,93 @@
     <title>Stock Performance Tracker</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
-            margin-top: 50px;
+            width: 300px;
         }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #555;
+            margin-bottom: 20px;
+        }
+
         input {
-            padding: 10px;
-            width: 200px;
+            padding: 12px;
+            width: 80%;
+            border: 1px solid #ccc;
+            border-radius: 6px;
             font-size: 16px;
+            margin-bottom: 15px;
+            outline: none;
+            transition: border-color 0.3s;
         }
+
+        input:focus {
+            border-color: #007BFF;
+        }
+
         button {
-            padding: 10px 15px;
+            padding: 12px 20px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
             font-size: 16px;
-            margin-left: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #output {
+            margin-top: 20px;
+            color: #333;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h1>Stock Performance Tracker</h1>
-    <p>Enter a stock ticker symbol to track its performance:</p>
-    
-    <input type="text" id="tickerInput" placeholder="e.g. AAPL, TSLA, AMZN">
-    <button onclick="trackStock()">Track</button>
+    <div class="container">
+        <h1>Stock Tracker</h1>
+        <p>Enter a stock ticker symbol below:</p>
+        
+        <input type="text" id="tickerInput" placeholder="e.g. AAPL, TSLA, AMZN">
+        <br>
+        <button onclick="trackStock()">Track</button>
 
-    <p id="output"></p>
+        <div id="output"></div>
+    </div>
 
     <script>
         function trackStock() {
             const ticker = document.getElementById("tickerInput").value.toUpperCase();
+            const output = document.getElementById("output");
+
             if (ticker) {
-                document.getElementById("output").innerText = `Tracking stock: ${ticker}`;
+                output.innerText = `Tracking stock: ${ticker}`;
             } else {
-                document.getElementById("output").innerText = "Please enter a valid ticker symbol.";
+                output.innerText = "Please enter a valid ticker symbol.";
             }
         }
     </script>
