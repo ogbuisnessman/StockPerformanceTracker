@@ -3,36 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stock Details</title>
+  <title>Stock Performance</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f0f0f0;
-      margin: 0;
       padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      width: 500px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
       text-align: center;
+    }
+    #chartContainer {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: 20px auto;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
-      border-radius: 5px;
-      border: none;
       background-color: #007bff;
       color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #0056b3;
@@ -40,78 +36,59 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 id="stockHeader">Loading stock data...</h1>
-    <canvas id="stockChart" width="400" height="200"></canvas>
-    <div id="priceInfo" style="margin-top: 20px;"></div>
-    <button id="backButton">Back</button>
+  <h1>Stock Performance</h1>
+  <div id="chartContainer">
+    <canvas id="stockChart"></canvas>
   </div>
+  <button onclick="goBack()">Back</button>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const ticker = urlParams.get('ticker') || 'AAPL';  // Default to AAPL if none provided
-    const apiKey = 'MLV8TVRNWSAHLRMS';
+    const ticker = urlParams.get('ticker');
+    const apiKey = "MLV8TVRNWSAHLRMS";
 
-    document.getElementById('stockHeader').textContent = `Tracking stock: ${ticker.toUpperCase()}`;
+    async function fetchStockData() {
+      const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${ticker}&interval=5min&apikey=${apiKey}`);
+      const data = await response.json();
+      const timeSeries = data["Time Series (5min)"];
 
-    fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${apiKey}`)
-      .then(response => response.json())
-      .then(data => {
-        const timeSeries = data['Time Series (Daily)'];
-        
-        if (!timeSeries) {
-          document.getElementById('priceInfo').textContent = "Error fetching stock data. Please check the ticker.";
-          return;
-        }
+      if (!timeSeries) {
+        alert("Data unavailable or API limit reached. Try again later.");
+        return;
+      }
 
-        const labels = [];
-        const dataPoints = [];
+      const labels = Object.keys(timeSeries).reverse();
+      const prices = labels.map(time => parseFloat(timeSeries[time]["4. close"]));
 
-        for (const date in timeSeries) {
-          labels.unshift(date);  // Add to beginning to reverse order
-          dataPoints.unshift(parseFloat(timeSeries[date]['4. close']));
-          if (labels.length >= 7) break;  // Show last 7 days
-        }
-
-        const ctx = document.getElementById('stockChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: `${ticker.toUpperCase()} Closing Price`,
-              data: dataPoints,
-              borderColor: 'rgba(0,123,255,1)',
-              backgroundColor: 'rgba(0,123,255,0.2)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.3
-            }]
-          },
-          options: {
-            scales: {
-              y: {
-                beginAtZero: false
-              }
-            }
+      const ctx = document.getElementById("stockChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `${ticker.toUpperCase()} Price (5-min Intervals)`,
+            data: prices,
+            borderColor: "blue",
+            backgroundColor: "rgba(0, 123, 255, 0.1)",
+            fill: true
+          }]
+        },
+        options: {
+          scales: {
+            x: { display: true },
+            y: { display: true }
           }
-        });
-
-        const latestDate = labels[labels.length - 1];
-        const latestClose = dataPoints[dataPoints.length - 1];
-        document.getElementById('priceInfo').innerHTML = `
-          Latest Close (${latestDate}): $${latestClose.toFixed(2)}
-        `;
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('priceInfo').textContent = "Error fetching stock data.";
+        }
       });
+    }
 
-    document.getElementById('backButton').addEventListener('click', () => {
-      window.location.href = 'index.html';
-    });
+    function goBack() {
+      window.location.href = "index.html";
+    }
+
+    fetchStockData();
   </script>
 </body>
 </html>
+
 
