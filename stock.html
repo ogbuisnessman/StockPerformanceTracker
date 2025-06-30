@@ -3,174 +3,196 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stock Data with Chart</title>
+  <title>Stock Details</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f9f9f9;
       padding: 20px;
-      margin: 0;
-    }
-    .container {
-      max-width: 700px;
+      max-width: 600px;
       margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
-    .data-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 18px;
+    #stockInfo {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      overflow-x: auto;
     }
-    .data-row:last-child {
-      border-bottom: none;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      white-space: nowrap;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 30px;
     }
     button {
       display: block;
-      margin: 30px auto 0;
-      padding: 12px 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
+      margin: 0 auto;
+      padding: 10px 25px;
       font-size: 16px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
       transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #0056b3;
     }
-    .error {
-      color: red;
-      text-align: center;
-      margin-top: 20px;
-      font-weight: bold;
-    }
-    #chartContainer {
-      margin-top: 40px;
+    @media (max-width: 480px) {
+      #stockInfo {
+        padding: 10px;
+      }
+      th, td {
+        font-size: 14px;
+        padding: 6px 8px;
+      }
+      button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Stock Performance</h1>
-    <div id="stockData">
-      Loading...
-    </div>
-
-    <div id="chartContainer">
-      <canvas id="stockChart" style="max-height: 350px;"></canvas>
-    </div>
-
-    <button id="backBtn">Back</button>
-  </div>
-
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <h1>Stock Details</h1>
+  <div id="stockInfo">Loading data...</div>
+  <canvas id="stockChart"></canvas>
+  <button onclick="window.history.back()">Back</button>
 
   <script>
-    const API_KEY = 'MLV8TVRNWSAHLRMS'; // Your Alpha Vantage API key
-    const params = new URLSearchParams(window.location.search);
-    const ticker = params.get('ticker');
-
-    const stockDataDiv = document.getElementById('stockData');
-    const backBtn = document.getElementById('backBtn');
-    const ctx = document.getElementById('stockChart').getContext('2d');
-
-    backBtn.onclick = () => {
-      window.location.href = 'index.html';
-    };
+    const apiKey = 'MLV8TVRNWSAHLRMS';
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticker = urlParams.get('ticker');
 
     if (!ticker) {
-      stockDataDiv.innerHTML = '<p class="error">No ticker symbol provided.</p>';
+      document.getElementById('stockInfo').textContent = 'No ticker symbol provided.';
+      document.getElementById('stockChart').style.display = 'none';
     } else {
-      fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${API_KEY}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data['Error Message'] || !data['Time Series (Daily)']) {
-            stockDataDiv.innerHTML = `<p class="error">Invalid ticker symbol or no data available for "${ticker.toUpperCase()}".</p>`;
-            return;
-          }
-          const timeSeries = data['Time Series (Daily)'];
-          const dates = Object.keys(timeSeries).sort((a,b) => new Date(a) - new Date(b));
-          const latestDate = dates[dates.length - 1];
-          const latestData = timeSeries[latestDate];
+      fetchStockData(ticker.toUpperCase());
+    }
 
-          // Show latest day info
-          stockDataDiv.innerHTML = `
-            <div class="data-row"><strong>Ticker:</strong> <span>${ticker.toUpperCase()}</span></div>
-            <div class="data-row"><strong>Date:</strong> <span>${latestDate}</span></div>
-            <div class="data-row"><strong>Open:</strong> <span>$${parseFloat(latestData['1. open']).toFixed(2)}</span></div>
-            <div class="data-row"><strong>High:</strong> <span>$${parseFloat(latestData['2. high']).toFixed(2)}</span></div>
-            <div class="data-row"><strong>Low:</strong> <span>$${parseFloat(latestData['3. low']).toFixed(2)}</span></div>
-            <div class="data-row"><strong>Close:</strong> <span>$${parseFloat(latestData['4. close']).toFixed(2)}</span></div>
-            <div class="data-row"><strong>Volume:</strong> <span>${parseInt(latestData['5. volume']).toLocaleString()}</span></div>
-          `;
+    async function fetchStockData(tickerSymbol) {
+      const stockInfoDiv = document.getElementById('stockInfo');
+      const chartCanvas = document.getElementById('stockChart');
 
-          // Prepare data for chart - last 30 days
-          const last30Dates = dates.slice(-30);
-          const closingPrices = last30Dates.map(date => parseFloat(timeSeries[date]['4. close']));
-          
-          // Create chart
-          new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: last30Dates,
-              datasets: [{
-                label: `Closing Price (${ticker.toUpperCase()})`,
-                data: closingPrices,
-                borderColor: 'rgba(0, 123, 255, 1)',
-                backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                fill: true,
-                tension: 0.2,
-                pointRadius: 3,
-                pointHoverRadius: 6,
-              }]
-            },
-            options: {
-              responsive: true,
-              scales: {
-                x: {
-                  ticks: {
-                    maxTicksLimit: 10,
-                    maxRotation: 0,
-                    minRotation: 0
-                  }
-                },
-                y: {
-                  beginAtZero: false
-                }
-              },
-              plugins: {
-                legend: {
+      try {
+        const response = await fetch(
+          `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${tickerSymbol}&apikey=${apiKey}`
+        );
+        const data = await response.json();
+
+        if (data['Error Message']) {
+          stockInfoDiv.textContent = 'Invalid ticker symbol. Please go back and try again.';
+          chartCanvas.style.display = 'none';
+          return;
+        }
+
+        const timeSeries = data['Time Series (Daily)'];
+        if (!timeSeries) {
+          stockInfoDiv.textContent = 'No data available. Please try again later.';
+          chartCanvas.style.display = 'none';
+          return;
+        }
+
+        // Get last 30 days of data
+        const dates = Object.keys(timeSeries).slice(0, 30).reverse();
+        const closePrices = dates.map(date => parseFloat(timeSeries[date]['4. close']));
+
+        // Latest day data
+        const latestDate = dates[dates.length - 1];
+        const latestData = timeSeries[latestDate];
+
+        // Display table with latest data
+        stockInfoDiv.innerHTML = `
+          <table>
+            <tr><th>Stock</th><td>${tickerSymbol}</td></tr>
+            <tr><th>Date</th><td>${latestDate}</td></tr>
+            <tr><th>Open</th><td>$${parseFloat(latestData['1. open']).toFixed(2)}</td></tr>
+            <tr><th>High</th><td>$${parseFloat(latestData['2. high']).toFixed(2)}</td></tr>
+            <tr><th>Low</th><td>$${parseFloat(latestData['3. low']).toFixed(2)}</td></tr>
+            <tr><th>Close</th><td>$${parseFloat(latestData['4. close']).toFixed(2)}</td></tr>
+            <tr><th>Volume</th><td>${latestData['6. volume']}</td></tr>
+          </table>
+        `;
+
+        // Create chart
+        new Chart(chartCanvas, {
+          type: 'line',
+          data: {
+            labels: dates,
+            datasets: [{
+              label: 'Closing Price (Last 30 Days)',
+              data: closePrices,
+              fill: false,
+              borderColor: 'rgba(0,123,255,1)',
+              backgroundColor: 'rgba(0,123,255,0.3)',
+              tension: 0.2,
+              pointRadius: 3,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                display: true,
+                title: {
                   display: true,
-                  position: 'top'
+                  text: 'Date'
                 },
-                tooltip: {
-                  mode: 'index',
-                  intersect: false
+                ticks: {
+                  maxTicksLimit: 10,
+                  maxRotation: 45,
+                  minRotation: 45,
                 }
               },
-              interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
+              y: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Price ($)'
+                },
+                beginAtZero: false,
+              }
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
               }
             }
-          });
-        })
-        .catch(error => {
-          stockDataDiv.innerHTML = `<p class="error">Error fetching data. Try again later.</p>`;
-          console.error(error);
+          }
         });
+      } catch (error) {
+        stockInfoDiv.textContent = 'Error fetching data. Please try again later.';
+        chartCanvas.style.display = 'none';
+        console.error(error);
+      }
     }
   </script>
 </body>
