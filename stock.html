@@ -3,150 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stock Info</title>
+  <title>Stock Data</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      margin: 0;
+      background: #f9f9f9;
       padding: 20px;
-      display: flex;
-      justify-content: center;
+      margin: 0;
     }
     .container {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 100%;
       max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 18px;
     }
-    th, td {
-      padding: 12px 10px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
+    .data-row:last-child {
+      border-bottom: none;
     }
-    @media (max-width: 600px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      th {
-        display: none;
-      }
-      td {
-        position: relative;
-        padding-left: 50%;
-        border: none;
-        border-bottom: 1px solid #eee;
-      }
-      td::before {
-        position: absolute;
-        top: 12px;
-        left: 10px;
-        width: 45%;
-        white-space: nowrap;
-        font-weight: bold;
-        content: attr(data-label);
-      }
+    button {
+      display: block;
+      margin: 30px auto 0;
+      padding: 12px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
     }
     .error {
       color: red;
       text-align: center;
-      font-weight: bold;
       margin-top: 20px;
-    }
-    .back-button {
-      display: block;
-      margin: 20px auto 0 auto;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      text-align: center;
-      width: fit-content;
-      cursor: pointer;
-    }
-    .back-button:hover {
-      background-color: #0056b3;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Stock Information</h1>
-    <div id="stockInfo">Loading stock info...</div>
-    <a href="index.html" class="back-button">Back</a>
+    <h1>Stock Performance</h1>
+    <div id="stockData">
+      Loading...
+    </div>
+    <button id="backBtn">Back</button>
   </div>
 
   <script>
-    // Your Alpha Vantage API key
-    const API_KEY = 'MLV8TVRNWSAHLRMS';
+    const API_KEY = 'MLV8TVRNWSAHLRMS'; // Your Alpha Vantage API key
+    const params = new URLSearchParams(window.location.search);
+    const ticker = params.get('ticker');
 
-    // Get the ticker symbol from URL query parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const ticker = urlParams.get('ticker');
+    const stockDataDiv = document.getElementById('stockData');
+    const backBtn = document.getElementById('backBtn');
 
-    const stockInfoDiv = document.getElementById('stockInfo');
+    backBtn.onclick = () => {
+      window.location.href = 'index.html';
+    };
 
     if (!ticker) {
-      stockInfoDiv.innerHTML = '<p class="error">No stock ticker provided.</p>';
+      stockDataDiv.innerHTML = '<p class="error">No ticker symbol provided.</p>';
     } else {
-      // Fetch stock data from Alpha Vantage
-      fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${ticker.toUpperCase()}&apikey=${API_KEY}`)
+      fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${API_KEY}`)
         .then(response => response.json())
         .then(data => {
           if (data['Error Message'] || !data['Time Series (Daily)']) {
-            stockInfoDiv.innerHTML = `<p class="error">Invalid ticker or no data found for "${ticker.toUpperCase()}". Please try again.</p>`;
+            stockDataDiv.innerHTML = `<p class="error">Invalid ticker symbol or no data available for "${ticker.toUpperCase()}".</p>`;
             return;
           }
-
           const timeSeries = data['Time Series (Daily)'];
-          const dates = Object.keys(timeSeries).sort((a, b) => new Date(b) - new Date(a)); // Sort descending by date
-
-          // Latest trading day data
+          const dates = Object.keys(timeSeries).sort((a,b) => new Date(b) - new Date(a));
           const latestDate = dates[0];
           const latestData = timeSeries[latestDate];
 
-          // Previous trading day data (for comparison)
-          const prevDate = dates[1];
-          const prevData = timeSeries[prevDate];
-
-          // Calculate price change and percent change
-          const latestClose = parseFloat(latestData['4. close']);
-          const prevClose = parseFloat(prevData['4. close']);
-          const change = latestClose - prevClose;
-          const changePercent = (change / prevClose) * 100;
-
-          // Format numbers to 2 decimal places
-          const formatNum = num => num.toFixed(2);
-
-          // Display stock info in a table
-          stockInfoDiv.innerHTML = `
-            <h2>${ticker.toUpperCase()} — ${latestDate}</h2>
-            <table>
-              <tr><td data-label="Open">Open</td><td>$${formatNum(parseFloat(latestData['1. open']))}</td></tr>
-              <tr><td data-label="High">High</td><td>$${formatNum(parseFloat(latestData['2. high']))}</td></tr>
-              <tr><td data-label="Low">Low</td><td>$${formatNum(parseFloat(latestData['3. low']))}</td></tr>
-              <tr><td data-label="Close">Close</td><td>$${formatNum(latestClose)}</td></tr>
-              <tr><td data-label="Adjusted Close">Adjusted Close</td><td>$${formatNum(parseFloat(latestData['5. adjusted close']))}</td></tr>
-              <tr><td data-label="Volume">Volume</td><td>${parseInt(latestData['6. volume']).toLocaleString()}</td></tr>
-              <tr><td data-label="Change">Change</td><td style="color:${change >= 0 ? 'green' : 'red'};">${change >= 0 ? '+' : ''}${formatNum(change)} (${change >= 0 ? '+' : ''}${formatNum(changePercent)}%)</td></tr>
-            </table>
+          stockDataDiv.innerHTML = `
+            <div class="data-row"><strong>Ticker:</strong> <span>${ticker.toUpperCase()}</span></div>
+            <div class="data-row"><strong>Date:</strong> <span>${latestDate}</span></div>
+            <div class="data-row"><strong>Open:</strong> <span>$${parseFloat(latestData['1. open']).toFixed(2)}</span></div>
+            <div class="data-row"><strong>High:</strong> <span>$${parseFloat(latestData['2. high']).toFixed(2)}</span></div>
+            <div class="data-row"><strong>Low:</strong> <span>$${parseFloat(latestData['3. low']).toFixed(2)}</span></div>
+            <div class="data-row"><strong>Close:</strong> <span>$${parseFloat(latestData['4. close']).toFixed(2)}</span></div>
+            <div class="data-row"><strong>Volume:</strong> <span>${parseInt(latestData['5. volume']).toLocaleString()}</span></div>
           `;
         })
         .catch(error => {
-          stockInfoDiv.innerHTML = `<p class="error">Error fetching stock data. Please try again later.</p>`;
-          console.error('Fetch error:', error);
+          stockDataDiv.innerHTML = `<p class="error">Error fetching data. Try again later.</p>`;
+          console.error(error);
         });
     }
   </script>
