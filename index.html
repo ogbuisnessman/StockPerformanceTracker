@@ -13,22 +13,28 @@
       align-items: center;
       height: 100vh;
       margin: 0;
+      padding: 20px;
     }
     .container {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      width: 350px;
+      width: 100%;
+      max-width: 400px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
       text-align: center;
     }
+    h1 {
+      margin-bottom: 20px;
+    }
     input, button {
-      padding: 10px;
-      margin-top: 20px;
+      padding: 12px;
+      margin-top: 15px;
       width: 80%;
       font-size: 16px;
       border-radius: 5px;
       border: 1px solid #ccc;
+      box-sizing: border-box;
     }
     button {
       background-color: #007bff;
@@ -52,6 +58,8 @@
         name="ticker"
         placeholder="Enter stock ticker (e.g. AAPL)"
         required
+        autofocus
+        autocomplete="off"
       />
       <br />
       <button type="submit">Track</button>
