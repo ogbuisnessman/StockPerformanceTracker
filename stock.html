@@ -3,32 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stock Performance</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Stock Details</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f0f0f0;
+      margin: 0;
       padding: 20px;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
     }
-    #chartContainer {
+    .container {
       background: white;
       padding: 20px;
       border-radius: 10px;
-      max-width: 600px;
-      margin: 20px auto;
+      max-width: 400px;
+      width: 100%;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stock-info {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    @media (max-width: 480px) {
+      .container {
+        padding: 15px;
+        max-width: 100%;
+      }
+      .stock-info {
+        font-size: 14px;
+      }
     }
     button {
-      margin-top: 20px;
       padding: 10px 20px;
-      font-size: 16px;
       background-color: #007bff;
-      color: white;
       border: none;
+      color: white;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
     }
     button:hover {
       background-color: #0056b3;
@@ -36,59 +57,107 @@
   </style>
 </head>
 <body>
-  <h1>Stock Performance</h1>
-  <div id="chartContainer">
+  <div class="container">
+    <h1>Stock Details</h1>
+    <div class="stock-info" id="stockInfo">Loading...</div>
     <canvas id="stockChart"></canvas>
+    <button id="backBtn">Back</button>
   </div>
-  <button onclick="goBack()">Back</button>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    const apiKey = 'MLV8TVRNWSAHLRMS'; // Your Alpha Vantage API key
     const urlParams = new URLSearchParams(window.location.search);
     const ticker = urlParams.get('ticker');
-    const apiKey = "MLV8TVRNWSAHLRMS";
 
-    async function fetchStockData() {
-      const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${ticker}&interval=5min&apikey=${apiKey}`);
-      const data = await response.json();
-      const timeSeries = data["Time Series (5min)"];
+    const stockInfoDiv = document.getElementById('stockInfo');
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    const backBtn = document.getElementById('backBtn');
 
-      if (!timeSeries) {
-        alert("Data unavailable or API limit reached. Try again later.");
-        return;
-      }
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
 
-      const labels = Object.keys(timeSeries).reverse();
-      const prices = labels.map(time => parseFloat(timeSeries[time]["4. close"]));
+    if (!ticker) {
+      stockInfoDiv.textContent = 'No ticker symbol provided.';
+    } else {
+      fetchStockData(ticker.toUpperCase());
+    }
 
-      const ctx = document.getElementById("stockChart").getContext("2d");
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: `${ticker.toUpperCase()} Price (5-min Intervals)`,
-            data: prices,
-            borderColor: "blue",
-            backgroundColor: "rgba(0, 123, 255, 0.1)",
-            fill: true
-          }]
-        },
-        options: {
-          scales: {
-            x: { display: true },
-            y: { display: true }
-          }
+    async function fetchStockData(symbol) {
+      try {
+        stockInfoDiv.textContent = `Fetching data for ${symbol}...`;
+
+        const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&apikey=${apiKey}`);
+        const data = await response.json();
+
+        if (data['Error Message'] || !data['Time Series (Daily)']) {
+          stockInfoDiv.textContent = 'Error fetching data. Please check the ticker symbol and try again.';
+          return;
         }
-      });
-    }
 
-    function goBack() {
-      window.location.href = "index.html";
-    }
+        const timeSeries = data['Time Series (Daily)'];
+        const dates = Object.keys(timeSeries).slice(0, 30).reverse(); // Last 30 days, oldest first
+        const closingPrices = dates.map(date => parseFloat(timeSeries[date]['4. close']));
 
-    fetchStockData();
+        // Show some stock info
+        const latestDate = dates[dates.length - 1];
+        const latestClose = closingPrices[closingPrices.length - 1].toFixed(2);
+        stockInfoDiv.innerHTML = `
+          <strong>${symbol}</strong><br/>
+          Latest Close (${latestDate}): $${latestClose}
+        `;
+
+        // Draw chart
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: dates,
+            datasets: [{
+              label: `${symbol} Closing Prices`,
+              data: closingPrices,
+              borderColor: 'rgba(0, 123, 255, 1)',
+              backgroundColor: 'rgba(0, 123, 255, 0.2)',
+              fill: true,
+              tension: 0.3,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Date'
+                },
+                ticks: {
+                  maxTicksLimit: 7
+                }
+              },
+              y: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Price ($)'
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              }
+            }
+          }
+        });
+
+      } catch (error) {
+        stockInfoDiv.textContent = 'An error occurred while fetching data.';
+        console.error(error);
+      }
+    }
   </script>
 </body>
 </html>
-
-
