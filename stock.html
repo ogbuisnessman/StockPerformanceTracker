@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stock Data</title>
+  <title>Stock Data with Chart</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@
       margin: 0;
     }
     .container {
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
       background: white;
       padding: 25px;
@@ -54,6 +54,9 @@
       margin-top: 20px;
       font-weight: bold;
     }
+    #chartContainer {
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
@@ -62,8 +65,16 @@
     <div id="stockData">
       Loading...
     </div>
+
+    <div id="chartContainer">
+      <canvas id="stockChart" style="max-height: 350px;"></canvas>
+    </div>
+
     <button id="backBtn">Back</button>
   </div>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
     const API_KEY = 'MLV8TVRNWSAHLRMS'; // Your Alpha Vantage API key
@@ -72,6 +83,7 @@
 
     const stockDataDiv = document.getElementById('stockData');
     const backBtn = document.getElementById('backBtn');
+    const ctx = document.getElementById('stockChart').getContext('2d');
 
     backBtn.onclick = () => {
       window.location.href = 'index.html';
@@ -88,10 +100,11 @@
             return;
           }
           const timeSeries = data['Time Series (Daily)'];
-          const dates = Object.keys(timeSeries).sort((a,b) => new Date(b) - new Date(a));
-          const latestDate = dates[0];
+          const dates = Object.keys(timeSeries).sort((a,b) => new Date(a) - new Date(b));
+          const latestDate = dates[dates.length - 1];
           const latestData = timeSeries[latestDate];
 
+          // Show latest day info
           stockDataDiv.innerHTML = `
             <div class="data-row"><strong>Ticker:</strong> <span>${ticker.toUpperCase()}</span></div>
             <div class="data-row"><strong>Date:</strong> <span>${latestDate}</span></div>
@@ -101,6 +114,58 @@
             <div class="data-row"><strong>Close:</strong> <span>$${parseFloat(latestData['4. close']).toFixed(2)}</span></div>
             <div class="data-row"><strong>Volume:</strong> <span>${parseInt(latestData['5. volume']).toLocaleString()}</span></div>
           `;
+
+          // Prepare data for chart - last 30 days
+          const last30Dates = dates.slice(-30);
+          const closingPrices = last30Dates.map(date => parseFloat(timeSeries[date]['4. close']));
+          
+          // Create chart
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: last30Dates,
+              datasets: [{
+                label: `Closing Price (${ticker.toUpperCase()})`,
+                data: closingPrices,
+                borderColor: 'rgba(0, 123, 255, 1)',
+                backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                fill: true,
+                tension: 0.2,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  ticks: {
+                    maxTicksLimit: 10,
+                    maxRotation: 0,
+                    minRotation: 0
+                  }
+                },
+                y: {
+                  beginAtZero: false
+                }
+              },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top'
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false
+                }
+              },
+              interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+              }
+            }
+          });
         })
         .catch(error => {
           stockDataDiv.innerHTML = `<p class="error">Error fetching data. Try again later.</p>`;
