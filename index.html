@@ -8,19 +8,19 @@
     body {
       font-family: Arial, sans-serif;
       background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
-      padding: 0 10px;
     }
     .container {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      width: 350px;
-      max-width: 100%;
+      width: 100%;
+      max-width: 400px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
       text-align: center;
     }
@@ -42,6 +42,10 @@
     button:hover {
       background-color: #0056b3;
     }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -54,13 +58,24 @@
         name="ticker"
         placeholder="Enter stock ticker (e.g. AAPL)"
         required
-        autocomplete="off"
-        pattern="[A-Za-z]{1,5}"
-        title="Please enter a valid ticker symbol (1-5 letters)."
       />
       <br />
       <button type="submit">Track</button>
     </form>
+    <div class="error" id="error"></div>
   </div>
+
+  <script>
+    const form = document.getElementById('stockForm');
+    const errorDiv = document.getElementById('error');
+
+    form.addEventListener('submit', function(e) {
+      const ticker = document.getElementById('tickerInput').value.trim();
+      if (!/^[A-Za-z]{1,5}$/.test(ticker)) {
+        e.preventDefault();
+        errorDiv.textContent = "Please enter a valid stock ticker (1-5 letters).";
+      }
+    });
+  </script>
 </body>
 </html>
