@@ -9,42 +9,44 @@
       font-family: Arial, sans-serif;
       background: #f0f0f0;
       margin: 0;
-      padding: 20px;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      padding: 20px;
     }
     .container {
       background: white;
       padding: 30px;
-      border-radius: 10px;
+      border-radius: 12px;
       width: 100%;
       max-width: 400px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
       text-align: center;
     }
-    input, button {
-      padding: 10px;
-      margin-top: 20px;
+    h1 {
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 12px;
       width: 80%;
-      font-size: 16px;
-      border-radius: 5px;
+      border-radius: 6px;
       border: 1px solid #ccc;
+      font-size: 16px;
+      margin-bottom: 20px;
     }
     button {
+      padding: 12px 20px;
       background-color: #007bff;
       color: white;
-      cursor: pointer;
       border: none;
-      transition: background-color 0.3s ease;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 85%;
     }
     button:hover {
       background-color: #0056b3;
-    }
-    .error {
-      color: red;
-      margin-top: 10px;
     }
   </style>
 </head>
@@ -62,20 +64,6 @@
       <br />
       <button type="submit">Track</button>
     </form>
-    <div class="error" id="error"></div>
   </div>
-
-  <script>
-    const form = document.getElementById('stockForm');
-    const errorDiv = document.getElementById('error');
-
-    form.addEventListener('submit', function(e) {
-      const ticker = document.getElementById('tickerInput').value.trim();
-      if (!/^[A-Za-z]{1,5}$/.test(ticker)) {
-        e.preventDefault();
-        errorDiv.textContent = "Please enter a valid stock ticker (1-5 letters).";
-      }
-    });
-  </script>
 </body>
 </html>
